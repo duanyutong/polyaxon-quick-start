@@ -1,25 +1,4 @@
-'''
-cluster instructions
-
-* multiple data volumes are mounted including "/data" and s3 bucketes,
-  use tracking.get_data_paths to see all data paths
-
-  * access images and mpacks (indexed by future DB) by
-    store.download_file(filename, local_path),  maybe will write a wrapper
-
-* only one output storage is supported, and we have s3 as default.
-
-  * always store output locally (in container) in "/outputs"
-    with your preferred directory structure, and upload to s3 when finished
-      experiment.log_artifact(file_path)
-      experiment.log_artifacts(dir_path)
-    which are equivalent to deprecated
-      experiment.outputs_store.upload_file(file_path)
-      experiment.outputs_store.upload_dir(dir_path)
-  * no need to call get_output_path
-
-
-
+''' All store manager commands
 from polystores.stores.manager import StoreManager
 store = StoreManager(path=data_path)
 

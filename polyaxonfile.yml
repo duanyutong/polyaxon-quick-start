@@ -17,11 +17,8 @@ build:
     - pip install boto3
     - pip install botocore
 
-params:
-  logger_type: 'logger_stream'
-
 run:
-  cmd:  python3 model.py --logger_type={{logger_type}}
+  cmd:  python3 model.py  # with default params
 
 logging:
-  level: DEBUG  # DEBUG level will also show s3 err in case of network issues
+  level: DEBUG  # DEBUG level will also show S3 err in case of network issues
