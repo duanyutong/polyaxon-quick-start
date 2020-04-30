@@ -13,6 +13,7 @@ store.download_dir(dirname, local_path)
 
 import os
 import logging
+import threading
 import argparse
 import tensorflow as tf
 from polyaxon_client.tracking import Experiment, get_log_level, get_data_paths
@@ -20,13 +21,17 @@ from tensorflow.examples.tutorials.mnist import input_data
 from glob import glob
 
 
-
-def get_logger():
-    logger = logging.getLogger(__file__)
+def get_logger(args_dict):
+    # calling getLogger without a name or with __name__ will cause multiple
+    # threads in the same namespace to compete for a file handle
+    # don't re-use any logger from any other threads by hashing the input args
+    name = 'TID-{} {}.{}'.format(threading.get_ident(), __file__, __name__)
+    logger = logging.getLogger(name)
     logger.setLevel(logging.getLevelName(get_log_level()))  # follow config lvl
     sh = logging.StreamHandler()  # get stream handler
     formatter = logging.Formatter(  # log format for each line
-        fmt='%(asctime)s %(name)s [%(levelname)-8s]: %(message)s',
+        fmt=('%(asctime)s [%(levelname)-8s] '
+             '%(name)s.%(funcName)s+%(lineno)s: %(message)s'),
         datefmt='%Y-%m-%dT%H:%M:%S%z')
     sh.setFormatter(formatter)
     logger.addHandler(sh)  # add stream handler
@@ -147,7 +152,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     arguments = args.__dict__
 
-    logger = get_logger()
+    logger = get_logger(arguments)
     logger.info('Logger initialised')
     logger.debug('data paths available: {}'.format(get_data_paths()))
     data_dir = get_data_paths()['local'] + "/mnist"  # TF doesn't support s3

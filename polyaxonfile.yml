@@ -9,6 +9,10 @@ framework: tensorflow
 #   node_selector:
 #     polyaxon: general
 
+
+logging:
+  level: DEBUG
+
 build:
   backend: native  # kaniko
   image: tensorflow/tensorflow:1.4.1-py3
@@ -18,7 +22,4 @@ build:
     - pip install botocore
 
 run:
-  cmd:  python3 model.py  # with default params
-
-logging:
-  level: DEBUG  # DEBUG level will also show S3 err in case of network issues
+  cmd:  python model.py  # with default params

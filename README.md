@@ -8,8 +8,6 @@ A quick start project for polyaxon.
 
 This example is used for the quick start [section in the documentation](https://docs.polyaxon.com/concepts/quick_start/)
 
-> If you are looking for the quick-start example used for v0.4, please go to the [v0.4 branch](https://github.com/polyaxon/polyaxon-quick-start/tree/v0.4) 
-
 This example also includes different `polyaxonfiles`:
 
    * A simple polyaxonfile for running the default values in the model.py.
@@ -46,3 +44,16 @@ Cluster Instructions
   advantage of hyperparameter search as an experiment group.
   Use the params section in the config; the inputs section seems to overlap
   with argparse and is not necessary.
+
+* Using logger: calling getLogger without a name will return the same logger
+  used by boto3, thus showing all kinds of S3 debug messages if level is set
+  to logging.DEBUG, so always call it with a non-empty name, unless you want
+  to invetigate S3 issues.
+
+  Furthermore, experiments in a group are executed apparently in the same
+  namespace. Calling getLogger with __name__, will cause the threads to log
+  to the same logger.
+  For polyaxon logging interface to work, each experiment must have a unique
+  logger, so don't re-use any logger from any other threads.
+  This can be ensured by hashing the input args,
+  as done in the example `model.py`.
