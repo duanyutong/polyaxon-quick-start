@@ -1,10 +1,57 @@
-from __future__ import absolute_import, division, print_function
+'''
+cluster instructions
 
+* multiple data volumes are mounted including "/data" and s3 bucketes,
+  use tracking.get_data_paths to see all data paths
+
+  * access images and mpacks (indexed by future DB) by
+    store.download_file(filename, local_path),  maybe will write a wrapper
+
+* only one output storage is supported, and we have s3 as default.
+
+  * always store output locally (in container) in "/outputs"
+    with your preferred directory structure, and upload to s3 when finished
+      experiment.log_artifact(file_path)
+      experiment.log_artifacts(dir_path)
+    which are equivalent to deprecated
+      experiment.outputs_store.upload_file(file_path)
+      experiment.outputs_store.upload_dir(dir_path)
+  * no need to call get_output_path
+
+
+
+from polystores.stores.manager import StoreManager
+store = StoreManager(path=data_path)
+
+store.delete(path)
+store.ls(path)
+store.upload_file(filename)
+store.upload_dir(dirname)
+store.download_file(filename, local_path)
+store.download_dir(dirname, local_path)
+'''
+
+
+import os
+import logging
 import argparse
 import tensorflow as tf
-from polyaxon_client.tracking import Experiment, get_log_level, get_data_paths, get_outputs_path
+from polyaxon_client.tracking import Experiment, get_log_level, get_data_paths
 from tensorflow.examples.tutorials.mnist import input_data
+from glob import glob
 
+
+
+def get_logger():
+    logger = logging.getLogger(__file__)
+    logger.setLevel(logging.getLevelName(get_log_level()))  # follow config lvl
+    sh = logging.StreamHandler()  # get stream handler
+    formatter = logging.Formatter(  # log format for each line
+        fmt='%(asctime)s %(name)s [%(levelname)-8s]: %(message)s',
+        datefmt='%Y-%m-%dT%H:%M:%S%z')
+    sh.setFormatter(formatter)
+    logger.addHandler(sh)  # add stream handler
+    return logger
 
 def set_logging(log_level=None):
     if log_level == 'INFO':
@@ -15,16 +62,10 @@ def set_logging(log_level=None):
         log_level = tf.logging.WARN
     else:
         log_level = 'INFO'
-
     tf.logging.set_verbosity(log_level)
 
 
 set_logging(get_log_level())
-
-data_paths = list(get_data_paths().values())[0]
-data_paths = "{}/mnist".format(data_paths)
-mnist = input_data.read_data_sets(data_paths, one_hot=False)
-
 
 def get_model_fn(learning_rate, dropout, activation):
     """Create a `model_fn` compatible with tensorflow estimator based on hyperparams."""
@@ -75,6 +116,7 @@ def get_model_fn(learning_rate, dropout, activation):
 
 
 if __name__ == '__main__':
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -117,9 +159,23 @@ if __name__ == '__main__':
         default=False,
         type=bool
     )
+    parser.add_argument(
+        '--logger_type',
+        default='logger',
+        type=str
+    )
 
     args = parser.parse_args()
     arguments = args.__dict__
+
+    logger = get_logger()
+    logger.info('Logger initialised')
+    logger.debug('data paths available: {}'.format(get_data_paths()))
+    data_dir = get_data_paths()['local'] + "/mnist"  # TF doesn't support s3
+    logger.warning('caching temp data to default local storage: {}'.format(
+        data_dir))
+    mnist = input_data.read_data_sets(data_dir, one_hot=False)
+    output_dir = '/outputs'  # temporary
 
     batch_size = arguments.pop('batch_size')
     num_steps = arguments.pop('num_steps')
@@ -143,7 +199,7 @@ if __name__ == '__main__':
 
     estimator = tf.estimator.Estimator(
         get_model_fn(learning_rate=learning_rate, dropout=dropout, activation=activation),
-        model_dir=get_outputs_path())
+        model_dir=output_dir)
 
     # Train the Model
     input_fn = tf.estimator.inputs.numpy_input_fn(
@@ -165,7 +221,18 @@ if __name__ == '__main__':
 
         metrics = estimator.evaluate(input_fn)
 
-        print("Testing metrics: {}", metrics)
+        logger.info("Testing metrics: {}".format(metrics))
         experiment.log_metrics(loss=metrics['loss'],
                                accuracy=metrics['accuracy'],
                                precision=metrics['precision'])
+    for path in glob(os.path.join(output_dir, '*')):
+        if os.path.isfile(path):
+            logger.info('Logging artifact file: {}'.format(path))
+            experiment.log_artifact(path)
+        elif os.path.isdir(path):
+            logger.info('Logging artifact dir: {}'.format(path))
+            experiment.log_artifacts(path)
+        else:
+            logger.error('Path skipped for being neither a file nor '
+                         'a directory: {}'.format(path))
+    logger.critical('This is a sample critical log message at the end.')

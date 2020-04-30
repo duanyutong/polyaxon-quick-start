@@ -1,7 +1,7 @@
 ---
 version: 1
 
-kind: experiment
+kind: group
 
 framework: tensorflow
 
@@ -17,11 +17,14 @@ build:
     - pip install boto3
     - pip install botocore
 
-params:
-  logger_type: 'logger_stream'
+hptuning:
+  concurrency: 4
+  matrix:
+    logger_type:
+      values: ['print', 'logger', 'polyaxon', 'logger_stream']
 
 run:
   cmd:  python3 model.py --logger_type={{logger_type}}
 
 logging:
-  level: DEBUG  # DEBUG level will also show s3 err in case of network issues
+  level: INFO  # setting to DEBUG level will include tons of s3 logs
