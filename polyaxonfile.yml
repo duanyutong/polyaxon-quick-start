@@ -15,11 +15,12 @@ logging:
 
 build:
   backend: native  # kaniko
-  image: tensorflow/tensorflow:1.4.1-py3
+  image: tensorflow/tensorflow:2.2.0rc4
   build_steps:
     - pip install polyaxon-client
     - pip install boto3
-    - pip install botocore
+params:
+  num_epochs: 30
 
 run:
-  cmd:  python model.py  # with default params
+  cmd:  python model_tf1.4.py --num_epochs={{ num_epochs }}
