@@ -1,0 +1,10 @@
+version: 1.1
+kind: operation
+name: compare-top-experiments
+joins:
+- query: "kind:job, metrics.loss:<0.3, status:succeeded"
+  sort: "metrics.loss"
+  limit: "5"
+  params:
+    uuids: {value: "globals.uuid"}
+hubRef: demo/tensorboard:multi-runs
