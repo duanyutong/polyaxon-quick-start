@@ -1,7 +1,0 @@
----
-version: 1
-
-kind: tensorboard
-
-build:
-  image: tensorflow/tensorflow:2.2.0rc4
